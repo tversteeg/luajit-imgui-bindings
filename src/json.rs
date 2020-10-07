@@ -1,9 +1,9 @@
 use serde_json::{Number, Result, Value};
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 /// Corresponds to definitions.json & impl_definitions.json
-#[derive(Debug, serde::Deserialize)]
-pub struct Definitions(HashMap<String, Vec<Definition>>);
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Definitions(pub HashMap<String, Vec<Definition>>);
 
 impl Definitions {
     pub fn from_str(json: &str) -> Result<Self> {
@@ -11,41 +11,41 @@ impl Definitions {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Definition {
-    args: String,
+    pub args: String,
     #[serde(rename = "argsT")]
-    args_t: Vec<ArgT>,
+    pub args_t: Vec<ArgT>,
     #[serde(rename = "argsoriginal")]
-    args_original: Option<String>,
-    call_args: String,
+    pub args_original: Option<String>,
+    pub call_args: String,
     #[serde(rename = "cimguiname")]
-    cimgui_name: String,
-    defaults: HashMap<String, String>,
+    pub cimgui_name: String,
+    pub defaults: HashMap<String, String>,
     #[serde(rename = "funcname")]
-    func_name: Option<String>,
-    location: Option<String>,
+    pub func_name: Option<String>,
+    pub location: Option<String>,
     #[serde(rename = "ov_cimguiname")]
-    ov_cimgui_name: String,
-    ret: Option<String>,
-    signature: String,
+    pub ov_cimgui_name: String,
+    pub ret: Option<String>,
+    pub signature: String,
     #[serde(rename = "stname")]
-    struct_name: String,
+    pub struct_name: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct ArgT {
-    name: String,
+    pub name: String,
     #[serde(rename = "type")]
-    type_: String,
+    pub type_: String,
 }
 
 /// Corresponds to structs_and_enums.json
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct StructsAndEnums {
-    enums: HashMap<String, Enum>,
-    locations: HashMap<String, Location>,
-    structs: HashMap<String, Struct>,
+    pub enums: HashMap<String, Enum>,
+    pub locations: HashMap<String, Location>,
+    pub structs: HashMap<String, Struct>,
 }
 
 impl StructsAndEnums {
@@ -54,33 +54,43 @@ impl StructsAndEnums {
     }
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Enum(Vec<EnumValue>);
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Enum(pub Vec<EnumValue>);
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct EnumValue {
-    name: String,
-    calc_value: Option<Number>,
-    value: Value,
+    pub name: String,
+    pub calc_value: Option<i64>,
+    pub value: String,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Location(String);
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Struct(Vec<Field>);
+impl Location {
+    pub fn line_number(&self) -> i64 {
+        i64::from_str(self.0.split(":").last().expect("Could not find ':' symbol"))
+            .expect("Invalid string")
+    }
 
-#[derive(Debug, serde::Deserialize)]
+    pub fn filename(&self) -> &str {
+        self.0.split(":").next().expect("Could not find ':' symbol")
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Struct(pub Vec<Field>);
+
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct Field {
-    name: String,
-    template_type: Option<String>,
-    #[serde(rename = "type")]
-    type_: String,
+    pub name: String,
+    pub template_type: Option<String>,
+    pub r#type: String,
 }
 
 /// Corresponds to typedefs_dict.json
-#[derive(Debug, serde::Deserialize)]
-pub struct Typedefs(HashMap<String, String>);
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Typedefs(pub HashMap<String, String>);
 
 impl Typedefs {
     pub fn from_str(json: &str) -> Result<Self> {

@@ -20,5 +20,7 @@ fn main() -> Result<()> {
 
     let parser = parser::Parser::new();
 
+    dbg!(parser);
+
     Ok(())
 }

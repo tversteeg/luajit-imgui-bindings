@@ -1,19 +1,31 @@
 use anyhow::Result;
 
 /// Represents an ImGui structure.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Struct {
     name: String,
     fields: Vec<Field>,
+    location: Option<(String, i64)>,
 }
 
 impl Struct {
     /// Add a new struct from the parsed data.
-    pub fn from_parsed(name: &str, fields: Vec<Field>) -> Result<Self> {
-        Ok(Self {
-            name: name.to_string(),
+    pub fn from_parsed(name: String, fields: Vec<Field>) -> Self {
+        Self {
+            name,
             fields,
-        })
+            ..Default::default()
+        }
+    }
+
+    /// Add location information.
+    pub fn add_location(&mut self, filename: &str, line_number: i64) {
+        self.location = Some((filename.to_string(), line_number));
+    }
+
+    /// Check if this type is the same as the string.
+    pub fn is_same(&self, r#type: &str) -> bool {
+        self.name == r#type
     }
 }
 
@@ -26,12 +38,12 @@ pub struct Field {
 }
 
 impl Field {
-    /// Add a new struct from the parsed data.
-    pub fn from_parsed(name: &str, template_type: Option<&str>, type_: &str) -> Result<Self> {
-        Ok(Self {
-            name: name.to_string(),
-            template_type: template_type.map(|x| x.to_string()),
-            type_: type_.to_string(),
-        })
+    /// Add a new struct field from the parsed data.
+    pub fn from_parsed(name: String, template_type: Option<String>, type_: String) -> Self {
+        Self {
+            name,
+            template_type,
+            type_,
+        }
     }
 }
