@@ -34,16 +34,16 @@ impl Struct {
 pub struct Field {
     name: String,
     template_type: Option<String>,
-    type_: String,
+    r#type: String,
 }
 
 impl Field {
     /// Add a new struct field from the parsed data.
-    pub fn from_parsed(name: String, template_type: Option<String>, type_: String) -> Self {
+    pub fn from_parsed(name: String, template_type: Option<String>, r#type: String) -> Self {
         Self {
             name,
             template_type,
-            type_,
+            r#type,
         }
     }
 }

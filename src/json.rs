@@ -24,7 +24,7 @@ pub struct Definition {
     pub defaults: HashMap<String, String>,
     #[serde(rename = "funcname")]
     pub func_name: Option<String>,
-    pub location: Option<String>,
+    pub location: Option<Location>,
     #[serde(rename = "ov_cimguiname")]
     pub ov_cimgui_name: String,
     pub ret: Option<String>,
@@ -37,7 +37,7 @@ pub struct Definition {
 pub struct ArgT {
     pub name: String,
     #[serde(rename = "type")]
-    pub type_: String,
+    pub r#type: String,
 }
 
 /// Corresponds to structs_and_enums.json

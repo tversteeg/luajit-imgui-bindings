@@ -1,4 +1,5 @@
 use crate::{
+    function::{Arg, Function},
     json,
     r#enum::{Enum, Value},
     r#struct::{Field, Struct},
@@ -116,7 +117,40 @@ impl Parser {
             });
         });
 
-        Ok(Data { types })
+        let functions = self
+            .defs
+            .iter()
+            .flat_map(|defs| defs.0.iter())
+            .flat_map(|(name, defs)| {
+                defs.iter().map(|def| {
+                    let args = def
+                        .args_t
+                        .iter()
+                        .map(|arg| {
+                            Arg::from_parsed(
+                                arg.name.clone(),
+                                def.defaults.get(&arg.name).map(|s| s.clone()),
+                                arg.r#type.clone(),
+                            )
+                        })
+                        .collect();
+
+                    Function::from_parsed(
+                        /// Use the func name and if that's missing the cimgui name
+                        def.func_name.as_ref().unwrap_or(&def.cimgui_name).clone(),
+                        args,
+                        /// Parse the location
+                        def.location
+                            .as_ref()
+                            .map(|loc| (loc.filename().to_string(), loc.line_number())),
+                        def.ret.clone(),
+                        def.signature.clone(),
+                    )
+                })
+            })
+            .collect();
+
+        Ok(Data { functions, types })
     }
 }
 
@@ -124,6 +158,7 @@ impl Parser {
 #[derive(Debug, Default)]
 pub struct Data {
     types: Vec<Type>,
+    functions: Vec<Function>,
 }
 
 #[cfg(test)]
@@ -150,10 +185,6 @@ mod tests {
 
         // Parse everything
         let data = parser.parse()?;
-
-        dbg!(data);
-
-        assert!(false);
 
         Ok(())
     }

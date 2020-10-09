@@ -1,4 +1,5 @@
 mod r#enum;
+mod function;
 mod json;
 mod parser;
 mod r#struct;
