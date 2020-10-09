@@ -2,6 +2,7 @@ mod r#enum;
 mod function;
 mod json;
 mod parser;
+mod render;
 mod r#struct;
 mod r#type;
 

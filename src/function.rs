@@ -1,3 +1,7 @@
+use crate::{r#type::Type, render::Render};
+use indoc::indoc;
+use itertools::Itertools;
+
 /// Represents an ImGui function, not a method.
 #[derive(Debug)]
 pub struct Function {
@@ -42,6 +46,36 @@ impl Function {
     }
 }
 
+impl Render for Function {
+    fn lua(&self, types: &Vec<Type>) -> String {
+        format!(
+            indoc!(
+                r#"
+        function {module}.{name}({args})
+            -- checks
+            -- call
+            {ret}
+        end
+        "#
+            ),
+            // TODO: Make this configurable
+            module = "gui",
+            name = self.name,
+            args = self
+                .args
+                .iter()
+                .map(|arg| arg.name())
+                .intersperse(", ")
+                .collect::<String>(),
+            ret = self.ret.as_ref().map(|ret| "return ret").unwrap_or("")
+        )
+    }
+
+    fn doc(&self, types: &Vec<Type>) -> String {
+        format!("")
+    }
+}
+
 /// Represent an ImGui function & method argument.
 #[derive(Debug)]
 pub struct Arg {
@@ -59,10 +93,17 @@ impl Arg {
             r#type,
         }
     }
+
+    /// The name of the argument.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::render::Render;
+
     #[test]
     fn cdef() -> anyhow::Result<()> {
         let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string());
@@ -77,6 +118,35 @@ mod tests {
         );
 
         assert_eq!(func.cdef(), "const char[512] func(char*, int);");
+
+        Ok(())
+    }
+
+    #[test]
+    fn lua() -> anyhow::Result<()> {
+        let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string());
+        let arg2 = super::Arg::from_parsed("second".to_string(), None, "int".to_string());
+
+        let func = super::Function::from_parsed(
+            "func".to_string(),
+            vec![arg1, arg2],
+            None,
+            Some("const char[512]".to_string()),
+            "(char*, int)".to_string(),
+        );
+
+        assert_eq!(
+            func.lua(&vec![]),
+            indoc::indoc!(
+                r#"
+                function gui.func(first, second)
+                    -- checks
+                    -- call
+                    return ret
+                end
+                "#
+            )
+        );
 
         Ok(())
     }
