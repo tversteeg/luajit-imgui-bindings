@@ -1,9 +1,9 @@
-use crate::function::Function;
+use crate::{function::Function, name::Name};
 
 /// Represents an ImGui structure.
 #[derive(Debug, Default)]
 pub struct Struct {
-    name: String,
+    name: Name,
     fields: Vec<Field>,
     location: Option<(String, i64)>,
     methods: Vec<Function>,
@@ -11,7 +11,7 @@ pub struct Struct {
 
 impl Struct {
     /// Add a new struct from the parsed data.
-    pub fn from_parsed(name: String, fields: Vec<Field>) -> Self {
+    pub fn from_parsed(name: Name, fields: Vec<Field>) -> Self {
         Self {
             name,
             fields,
@@ -31,21 +31,21 @@ impl Struct {
 
     /// Check if this type is the same as the string.
     pub fn is_same(&self, r#type: &str) -> bool {
-        self.name == r#type
+        self.name.imgui() == r#type
     }
 }
 
 /// Represents an ImGui structure field.
 #[derive(Debug)]
 pub struct Field {
-    name: String,
+    name: Name,
     template_type: Option<String>,
     r#type: String,
 }
 
 impl Field {
     /// Add a new struct field from the parsed data.
-    pub fn from_parsed(name: String, template_type: Option<String>, r#type: String) -> Self {
+    pub fn from_parsed(name: Name, template_type: Option<String>, r#type: String) -> Self {
         Self {
             name,
             template_type,

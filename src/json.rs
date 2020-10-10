@@ -33,6 +33,7 @@ pub struct Definition {
     pub struct_name: String,
     #[serde(default)]
     pub templated: bool,
+    pub namespace: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

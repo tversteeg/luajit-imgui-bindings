@@ -78,14 +78,14 @@ impl Parser {
                         .iter()
                         .map(|field| {
                             Field::from_parsed(
-                                field.name.clone(),
+                                (&field.name).into(),
                                 field.template_type.clone(),
                                 field.r#type.clone(),
                             )
                         })
                         .collect();
 
-                    Type::Struct(Struct::from_parsed(name.clone(), fields))
+                    Type::Struct(Struct::from_parsed(name.into(), fields))
                 })
                 .collect::<Vec<_>>(),
         );
@@ -150,7 +150,7 @@ impl Parser {
                             },
                             Function::from_parsed(
                                 // Use the func name and if that's missing the cimgui name
-                                def.func_name.as_ref().unwrap_or(&name.to_string()).clone(),
+                                def.func_name.as_ref().unwrap_or(&name.to_string()).into(),
                                 args,
                                 // Parse the location
                                 def.location

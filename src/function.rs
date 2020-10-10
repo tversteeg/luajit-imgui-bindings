@@ -1,4 +1,4 @@
-use crate::{r#type::Type, render::Render};
+use crate::{name::Name, r#type::Type, render::Render};
 use indoc::indoc;
 use itertools::Itertools;
 
@@ -6,7 +6,7 @@ use itertools::Itertools;
 #[derive(Debug)]
 pub struct Function {
     /// The full function name.
-    name: String,
+    name: Name,
     /// All the arguments of this function.
     args: Vec<Arg>,
     /// The return value.
@@ -20,7 +20,7 @@ pub struct Function {
 impl Function {
     /// Add a new function from the parsed data.
     pub fn from_parsed(
-        name: String,
+        name: Name,
         args: Vec<Arg>,
         location: Option<(String, i64)>,
         ret: Option<String>,
@@ -50,7 +50,7 @@ impl Render for Function {
             ),
             // TODO: Make this configurable
             module = "gui",
-            name = self.name,
+            name = self.name.lua(),
             args = self
                 .args
                 .iter()
@@ -70,7 +70,7 @@ impl Render for Function {
         format!(
             "{} {}{};",
             self.ret.as_ref().unwrap_or(&String::new()),
-            self.name,
+            self.name.imgui(),
             self.signature
         )
     }
