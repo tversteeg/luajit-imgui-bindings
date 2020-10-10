@@ -4,8 +4,11 @@ use crate::{
     r#enum::{Enum, Value},
     r#struct::{Field, Struct},
     r#type::Type,
+    render::Render,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use indoc::indoc;
+use itertools::Itertools;
 use std::collections::HashMap;
 
 /// How cimgui output files need to be parsed.
@@ -110,45 +113,70 @@ impl Parser {
 
         // Add the location to each type when applicable
         self.locations.iter().for_each(|(name, location)| {
-            types.iter_mut().for_each(|mut r#type| {
+            types.iter_mut().for_each(|r#type| {
                 if r#type.is_same(name) {
                     r#type.add_location(&location.filename(), location.line_number());
                 }
             });
         });
 
-        let functions = self
+        // Get an iterator of all methods & functions
+        let (methods, functions): (Vec<_>, Vec<_>) = self
             .defs
             .iter()
             .flat_map(|defs| defs.0.iter())
             .flat_map(|(name, defs)| {
-                defs.iter().map(|def| {
-                    let args = def
-                        .args_t
-                        .iter()
-                        .map(|arg| {
-                            Arg::from_parsed(
-                                arg.name.clone(),
-                                def.defaults.get(&arg.name).map(|s| s.clone()),
-                                arg.r#type.clone(),
-                            )
-                        })
-                        .collect();
+                defs.iter()
+                    // Only parse non-templated functions
+                    .filter(|def| !def.templated)
+                    .map(move |def| {
+                        let args = def
+                            .args_t
+                            .iter()
+                            .map(|arg| {
+                                Arg::from_parsed(
+                                    arg.name.clone(),
+                                    def.defaults.get(&arg.name).map(|s| s.clone()),
+                                    arg.r#type.clone(),
+                                )
+                            })
+                            .collect();
 
-                    Function::from_parsed(
-                        /// Use the func name and if that's missing the cimgui name
-                        def.func_name.as_ref().unwrap_or(&def.cimgui_name).clone(),
-                        args,
-                        /// Parse the location
-                        def.location
-                            .as_ref()
-                            .map(|loc| (loc.filename().to_string(), loc.line_number())),
-                        def.ret.clone(),
-                        def.signature.clone(),
-                    )
-                })
+                        (
+                            // Convert the string to an option
+                            match def.struct_name.as_str() {
+                                "" => None,
+                                value => Some(value.clone()),
+                            },
+                            Function::from_parsed(
+                                // Use the func name and if that's missing the cimgui name
+                                def.func_name.as_ref().unwrap_or(&name.to_string()).clone(),
+                                args,
+                                // Parse the location
+                                def.location
+                                    .as_ref()
+                                    .map(|loc| (loc.filename().to_string(), loc.line_number())),
+                                def.ret.clone(),
+                                def.signature.clone(),
+                            ),
+                        )
+                    })
             })
-            .collect();
+            // Split into functions and methods
+            .partition(|(struct_name, _)| struct_name.is_some());
+
+        // Add the methods to the structs
+        for (struct_name, method) in methods.into_iter() {
+            // Safe to unwrap because all instances that don't have a value are already partitioned
+            let struct_name = struct_name.unwrap();
+            match types.iter_mut().find(|r#type| r#type.is_same(struct_name)) {
+                Some(r#type) => r#type.add_method(method)?,
+                None => return Err(anyhow!("No struct \"{}\" for method found", struct_name)),
+            }
+        }
+
+        // Extract just the functions
+        let functions = functions.into_iter().map(|(_, func)| func).collect();
 
         Ok(Data { functions, types })
     }
@@ -159,6 +187,48 @@ impl Parser {
 pub struct Data {
     types: Vec<Type>,
     functions: Vec<Function>,
+}
+
+impl Data {
+    /// Render the result as a Lua file.
+    pub fn lua(&self) -> String {
+        format!(
+            indoc! {r#"
+            local gui = {{}}
+            gui.__index = gui
+
+            {args_lua}
+            --[[ Functions ]]
+
+            {functions}
+            return gui
+        "#},
+            args_lua = include_str!("lua/args.lua"),
+            functions = self
+                .functions
+                .iter()
+                .map(|func| func.lua(&self.types))
+                .intersperse("\n".to_string())
+                .collect::<String>()
+        )
+    }
+
+    /// Render the result as cdefs.
+    pub fn cdefs(&self) -> String {
+        format!(
+            indoc! {r#"
+            return [[
+            {cdefs}
+            ]]
+        "#},
+            cdefs = self
+                .functions
+                .iter()
+                .map(|func| func.cdef(&self.types))
+                .intersperse("\n".to_string())
+                .collect::<String>()
+        )
+    }
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use serde_json::{Number, Result, Value};
+use serde_json::Result;
 use std::{collections::HashMap, str::FromStr};
 
 /// Corresponds to definitions.json & impl_definitions.json
@@ -31,6 +31,8 @@ pub struct Definition {
     pub signature: String,
     #[serde(rename = "stname")]
     pub struct_name: String,
+    #[serde(default)]
+    pub templated: bool,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

@@ -6,4 +6,6 @@ pub trait Render {
     fn lua(&self, types: &Vec<Type>) -> String;
     /// Output Lua documentation.
     fn doc(&self, types: &Vec<Type>) -> String;
+    /// Output LuaJIT cdef.
+    fn cdef(&self, types: &Vec<Type>) -> String;
 }

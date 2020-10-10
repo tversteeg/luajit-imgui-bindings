@@ -34,16 +34,6 @@ impl Function {
             signature,
         }
     }
-
-    /// Get the cdef definition of this function.
-    pub fn cdef(&self) -> String {
-        format!(
-            "{} {}{};",
-            self.ret.as_ref().unwrap_or(&String::new()),
-            self.name,
-            self.signature
-        )
-    }
 }
 
 impl Render for Function {
@@ -71,8 +61,18 @@ impl Render for Function {
         )
     }
 
-    fn doc(&self, types: &Vec<Type>) -> String {
+    fn doc(&self, _types: &Vec<Type>) -> String {
         format!("")
+    }
+
+    /// Get the cdef definition of this function.
+    fn cdef(&self, _types: &Vec<Type>) -> String {
+        format!(
+            "{} {}{};",
+            self.ret.as_ref().unwrap_or(&String::new()),
+            self.name,
+            self.signature
+        )
     }
 }
 
@@ -117,7 +117,7 @@ mod tests {
             "(char*, int)".to_string(),
         );
 
-        assert_eq!(func.cdef(), "const char[512] func(char*, int);");
+        assert_eq!(func.cdef(&vec![]), "const char[512] func(char*, int);");
 
         Ok(())
     }
