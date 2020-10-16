@@ -10,6 +10,14 @@ pub enum Type {
 }
 
 impl Type {
+    /// Get a list of default C types.
+    pub fn default_list() -> Vec<Self> {
+        vec!["char*", "int", "float"]
+            .into_iter()
+            .map(|t| Self::C(t.to_string()))
+            .collect()
+    }
+
     /// Check if this type is the same as the string.
     pub fn is_same(&self, r#type: &str) -> bool {
         match self {
@@ -35,5 +43,61 @@ impl Type {
             Self::Enum(_) => Err(anyhow!("Cannot add method to enum")),
             Self::C(_) => Err(anyhow!("Cannot add method to C type")),
         }
+    }
+
+    /// The Lua primitive type.
+    pub fn lua_primitive_type(&self) -> Result<String> {
+        match self {
+            // Struct are always a table.
+            Self::Struct(_) => Ok("table".to_string()),
+            // Enums are always a number.
+            Self::Enum(_) => Ok("number".to_string()),
+            Self::C(c_type) => match c_type.as_str() {
+                "int" | "float" => Ok("number".to_string()),
+                "bool" => Ok("boolean".to_string()),
+                "const char*" | "char*" => Ok("string".to_string()),
+                other => Err(anyhow!("Unrecognized C type \"{}\"", other)),
+            },
+        }
+    }
+}
+
+/// The trait for type lists.
+pub trait TypeList {
+    type Output;
+
+    /// Find a type by it's ImGui name.
+    fn find(&self, imgui_type: &str) -> Result<&Self::Output>;
+}
+
+impl TypeList for Vec<Type> {
+    type Output = Type;
+
+    fn find(&self, imgui_type: &str) -> Result<&Type> {
+        self.iter()
+            .find(|r#type| r#type.is_same(imgui_type))
+            .ok_or_else(|| {
+                anyhow!(
+                    "ImGui type \"{}\" is not registered in type list",
+                    imgui_type
+                )
+            })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn lua_type() -> anyhow::Result<()> {
+        assert_eq!(
+            super::Type::C("int".to_string()).lua_primitive_type()?,
+            "number"
+        );
+        assert_eq!(
+            super::Type::C("const char*".to_string()).lua_primitive_type()?,
+            "string"
+        );
+
+        Ok(())
     }
 }

@@ -66,7 +66,7 @@ impl Parser {
 
     /// Convert everything to usable data.
     pub fn parse(&self) -> Result<Data> {
-        let mut types = vec![];
+        let mut types = Type::default_list();
 
         types.append(
             &mut self
@@ -133,11 +133,13 @@ impl Parser {
                         let args = def
                             .args_t
                             .iter()
-                            .map(|arg| {
+                            .enumerate()
+                            .map(|(index, arg)| {
                                 Arg::from_parsed(
                                     arg.name.clone(),
                                     def.defaults.get(&arg.name).map(|s| s.clone()),
                                     arg.r#type.clone(),
+                                    index as u8 + 1,
                                 )
                             })
                             .collect();

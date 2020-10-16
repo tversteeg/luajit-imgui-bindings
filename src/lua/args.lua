@@ -1,7 +1,7 @@
 function args_check(arg, expected_type, arg_index, allow_nil)
 	if arg == nil then
 		if allow_nil then
-			return
+			return arg
 		else
 			local callsite = debug.getinfo(2, "nSl")
 			local err = string.format("%s:%d: inside of function %s", callsite.short_src, callsite.currentline, callsite.name)
@@ -20,17 +20,19 @@ function args_check(arg, expected_type, arg_index, allow_nil)
 
 		local callsite = debug.getinfo(2, "nSl")
 		local error_context = string.format("Invalid argument %s:%d:\n" ..
-		"function %q called with invalid argument #%d %q.\n" ..
-		"Expected type of %q, but got %q with value %q",
-		callsite.short_src, callsite.linedefined,
-		callsite.name, tostring(arg_index), tostring(arg_name),
-		tostring(expected_type), type(arg), tostring(arg_value)
+			"function %q called with invalid argument #%d %q.\n" ..
+			"Expected type of %q, but got %q with value %q",
+			callsite.short_src, callsite.linedefined,
+			callsite.name, tostring(arg_index), tostring(arg_name),
+			tostring(expected_type), type(arg), tostring(arg_value)
 		)
 
 		local callsite_context = string.format(
-		"\n\tSource: %s:%d, from callsite %s",
-		callsite.short_src, callsite.currentline, callsite.name
+			"\n\tSource: %s:%d, from callsite %s",
+			callsite.short_src, callsite.currentline, callsite.name
 		)
 		error(error_context .. callsite_context)
 	end
+
+	return arg
 end

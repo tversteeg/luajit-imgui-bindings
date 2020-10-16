@@ -1,4 +1,9 @@
-use crate::{name::Name, r#type::Type, render::Render};
+use crate::{
+    name::Name,
+    r#type::{Type, TypeList},
+    render::Render,
+};
+use anyhow::{anyhow, Result};
 use indoc::indoc;
 use itertools::Itertools;
 
@@ -42,7 +47,7 @@ impl Render for Function {
             indoc!(
                 r#"
         function {module}.{name}({args})
-            -- checks
+        {checks}
             -- call
             {ret}
         end
@@ -57,6 +62,14 @@ impl Render for Function {
                 .map(|arg| arg.name())
                 .intersperse(", ")
                 .collect::<String>(),
+            checks = self
+                .args
+                .iter()
+                .map(|arg| arg
+                    .check_string(types)
+                    .expect("Could not build argument check"))
+                .intersperse("\n".to_string())
+                .collect::<String>(),
             ret = self.ret.as_ref().map(|ret| "return ret").unwrap_or("")
         )
     }
@@ -69,7 +82,7 @@ impl Render for Function {
     fn cdef(&self, _types: &Vec<Type>) -> String {
         format!(
             "{} {}{};",
-            self.ret.as_ref().unwrap_or(&String::new()),
+            self.ret.as_ref().unwrap_or(&"void".to_string()),
             self.name.imgui(),
             self.signature
         )
@@ -77,26 +90,54 @@ impl Render for Function {
 }
 
 /// Represent an ImGui function & method argument.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Arg {
     name: String,
     default_value: Option<String>,
     r#type: String,
+    index: u8,
 }
 
 impl Arg {
     /// Add a new argument from the parsed data.
-    pub fn from_parsed(name: String, default_value: Option<String>, r#type: String) -> Self {
+    pub fn from_parsed(
+        name: String,
+        default_value: Option<String>,
+        r#type: String,
+        index: u8,
+    ) -> Self {
         Self {
             name,
             default_value,
             r#type,
+            index,
         }
     }
 
     /// The name of the argument.
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Get the type reference of the argument.
+    pub fn r#type<'a>(&'a self, types: &'a Vec<Type>) -> Result<&'a Type> {
+        types
+            .find(&self.r#type)
+            .map_err(|err| anyhow!("Could not get type of argument \"{}\": {}", self.name, err))
+    }
+
+    /// The Lua argument check.
+    pub fn check_string(&self, types: &Vec<Type>) -> Result<String> {
+        Ok(format!(
+            "    {name} = arg_check({name}, \"{type}\", {index})",
+            // Use 'name' or 'name or default_value'
+            name = self.default_value.as_ref().map_or(
+                self.name().to_string(),
+                |default_value| format!("{} or {}", self.name(), default_value)
+            ),
+            r#type = self.r#type(types)?.lua_primitive_type()?,
+            index = self.index
+        ))
     }
 }
 
@@ -106,11 +147,11 @@ mod tests {
 
     #[test]
     fn cdef() -> anyhow::Result<()> {
-        let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string());
-        let arg2 = super::Arg::from_parsed("second".to_string(), None, "int".to_string());
+        let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string(), 0);
+        let arg2 = super::Arg::from_parsed("second".to_string(), None, "int".to_string(), 1);
 
         let func = super::Function::from_parsed(
-            "func".to_string(),
+            "func".into(),
             vec![arg1, arg2],
             None,
             Some("const char[512]".to_string()),
@@ -124,11 +165,11 @@ mod tests {
 
     #[test]
     fn lua() -> anyhow::Result<()> {
-        let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string());
-        let arg2 = super::Arg::from_parsed("second".to_string(), None, "int".to_string());
+        let arg1 = super::Arg::from_parsed("first".to_string(), None, "char*".to_string(), 1);
+        let arg2 = super::Arg::from_parsed("second".to_string(), None, "int".to_string(), 2);
 
         let func = super::Function::from_parsed(
-            "func".to_string(),
+            "func".into(),
             vec![arg1, arg2],
             None,
             Some("const char[512]".to_string()),
@@ -136,11 +177,12 @@ mod tests {
         );
 
         assert_eq!(
-            func.lua(&vec![]),
+            func.lua(&super::Type::default_list()),
             indoc::indoc!(
                 r#"
                 function gui.func(first, second)
-                    -- checks
+                    first = arg_check(first, "string", 1)
+                    second = arg_check(second, "number", 2)
                     -- call
                     return ret
                 end
